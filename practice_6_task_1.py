@@ -19,7 +19,7 @@
 """
 import databases
 from typing import List
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import insert, select, update, delete
@@ -66,7 +66,7 @@ class UserOut(BaseModel):
 
 
 @app.get("/create_fake_users/{count}")
-async def create_fake_users(count: int):
+async def create_fake_users(count: int = Path(..., ge=1)):
 
     for i in range(count):
 
@@ -87,7 +87,7 @@ async def read_all_users():
 
 
 @app.get("/users/{user_id}", response_model=UserOut)
-async def read_user(user_id: int):
+async def read_user(user_id: int = Path(..., ge=0)):
 
     query = select(User).where(User.id == user_id)
     answer = await database.fetch_one(query)
@@ -105,7 +105,7 @@ async def create_one_user(user: UserIn):
 
 
 @app.put("/users/{user_id}", response_model=UserOut)
-async def update_user(user_id: int, new_user: UserIn):
+async def update_user(new_user: UserIn, user_id: int = Path(..., ge=1)):
 
     query = update(User).where(User.id == user_id).values(**new_user.dict())
     await database.execute(query)
@@ -113,7 +113,7 @@ async def update_user(user_id: int, new_user: UserIn):
 
 
 @app.delete("/users/{user_id}")
-async def delete_user(user_id: int):
+async def delete_user(user_id: int = Path(..., ge=1)):
 
     query = delete(User).where(User.id == user_id)
     await database.execute(query)
