@@ -10,10 +10,11 @@ import databases
 from typing import List
 from fastapi import FastAPI, Path
 from pydantic import BaseModel, Field
+from starlette.responses import JSONResponse
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import insert, select, update, delete
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, Date, CheckConstraint
-from starlette.responses import JSONResponse
+from sqlalchemy import create_engine, CheckConstraint, Column, Integer, String, Boolean
+
 
 DATABASE_URL = "sqlite:///database_practice_6_task_3.db"
 
@@ -46,13 +47,13 @@ class TaskIn(BaseModel):
     status: bool = Field(...)
 
 
-class TaskInCreate(BaseModel):
+class TaskInForCreate(BaseModel):
     name: str = Field(min_length=2, max_length=32)
     description: str = Field(min_length=2, max_length=32)
 
 
 class TaskOut(BaseModel):
-    id: int = Field(..., gt=0)
+    id: int = Field(..., ge=1)
     name: str = Field(min_length=2, max_length=32)
     description: str = Field(min_length=2, max_length=32)
     status: bool = Field(...)
@@ -71,7 +72,7 @@ async def create_fake_task(count: int = Path(..., ge=1)):
 
 
 @app.post("/tasks/", response_model=TaskOut)
-async def create_one_task(task: TaskInCreate):
+async def create_one_task(task: TaskInForCreate):
 
     new_task = \
         insert(Task).values(name=task.name,
@@ -137,7 +138,7 @@ async def delete_task(task_id: int = Path(..., ge=1)):
     query = delete(Task).where(Task.id == task_id)
 
     if await database.execute(query):
-        return {'Deleted user': task_id}
+        return {'delete_task': task_id}
 
 
 @app.on_event("startup")
