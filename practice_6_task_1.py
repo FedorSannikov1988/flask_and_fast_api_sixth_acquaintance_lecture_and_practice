@@ -20,49 +20,20 @@
 import databases
 from typing import List
 from fastapi import FastAPI, Path
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine
+from practice_6_task_1_models_db import Base, User
 from sqlalchemy.sql import insert, select, update, delete
-from sqlalchemy import create_engine, Column, Integer, String
-
+from practice_6_task_1_models_validation import UserOut, UserIn
 
 DATABASE_URL = "sqlite:///database_practice_6_task_1.db"
 
-
 database = databases.Database(DATABASE_URL)
 
-
-Base = declarative_base()
-
-
-class User(Base):
-
-    __tablename__ = "user"
-
-    id = Column(Integer, primary_key=True)
-    username = Column(String(32))
-    email = Column(String(128))
-    password = Column(String(50))
-
-
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
 Base.metadata.create_all(bind=engine)
 
-
 app = FastAPI()
-
-
-class UserIn(BaseModel):
-    username: str = Field(max_length=32)
-    email: str = Field(max_length=128)
-    password: str = Field(max_length=50)
-
-
-class UserOut(BaseModel):
-    id: int = Field(..., gt=0)
-    username: str = Field(max_length=32)
-    email: str = Field(max_length=128)
-    password: str = Field(max_length=50)
 
 
 @app.get("/create_fake_users/{count}")
@@ -86,12 +57,17 @@ async def read_all_users():
     return answer
 
 
-@app.get("/users/{user_id}", response_model=UserOut)
+@app.get("/users/{user_id}", response_model=UserOut | None)
 async def read_user(user_id: int = Path(..., ge=0)):
 
-    query = select(User).where(User.id == user_id)
-    answer = await database.fetch_one(query)
-    return answer
+    query = \
+        select(User).where(User.id == user_id)
+
+    answer = \
+        await database.fetch_one(query)
+
+    if answer:
+        return answer
 
 
 @app.post("/users/", response_model=UserOut)
@@ -104,20 +80,23 @@ async def create_one_user(user: UserIn):
     return {"id": last_record_id, **user.dict()}
 
 
-@app.put("/users/{user_id}", response_model=UserOut)
+@app.put("/users/{user_id}", response_model=UserOut | None)
 async def update_user(new_user: UserIn, user_id: int = Path(..., ge=1)):
 
-    query = update(User).where(User.id == user_id).values(**new_user.dict())
-    await database.execute(query)
-    return {"id": user_id, **new_user.dict()}
+    query = \
+        update(User).where(User.id == user_id).values(**new_user.dict())
+
+    if await database.execute(query):
+        return {"id": user_id, **new_user.dict()}
 
 
 @app.delete("/users/{user_id}")
 async def delete_user(user_id: int = Path(..., ge=1)):
 
     query = delete(User).where(User.id == user_id)
-    await database.execute(query)
-    return {'Deleted user': user_id}
+
+    if await database.execute(query):
+        return {'deleted user': user_id}
 
 
 @app.on_event("startup")
