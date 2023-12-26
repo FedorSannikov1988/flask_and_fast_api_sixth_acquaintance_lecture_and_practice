@@ -21,6 +21,7 @@ import databases
 from typing import List
 from fastapi import FastAPI, Path
 from sqlalchemy import create_engine
+#from contextlib import asynccontextmanager
 from practice_6_task_1_models_db import Base, User
 from sqlalchemy.sql import insert, select, update, delete
 from practice_6_task_1_models_validation import UserOut, UserIn
@@ -97,6 +98,15 @@ async def delete_user(user_id: int = Path(..., ge=1)):
 
     if await database.execute(query):
         return {'deleted user': user_id}
+
+
+#@asynccontextmanager
+#async def lifespan(app: FastAPI):
+#    await database.connect()
+#
+#    yield
+#
+#    await database.disconnect()
 
 
 @app.on_event("startup")
